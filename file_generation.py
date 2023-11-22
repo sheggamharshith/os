@@ -21,7 +21,7 @@ class FileGeneration:
         self.period = None
 
     def generate_input_file(self, file_name, is_distributed):
-        self.total_proc = random.randint(5, MAX_PROCESSES - 6) + 5
+        self.total_proc = random.randint(5, MAX_PROCESSES) + 5
         self.set_file_name(file_name)
 
         if self.file_exists(self.file_name):
@@ -73,10 +73,10 @@ class FileGeneration:
                     self.randomize_not_dist()
 
                 output_file.write(
-                    f"{proc_num} {self.arrival_time} {self.burst_time} {self.relative_deadline} {self.period}\n"  # noqa:E501
+                    f"{proc_num} {self.arrival_time} {self.relative_deadline} {self.period}\n"  # noqa:E501
                 )
                 print(
-                    f"{proc_num} {self.arrival_time} {self.burst_time} {self.relative_deadline} {self.period}"  # noqa:E501
+                    f"{proc_num} {self.arrival_time} {self.relative_deadline} {self.period}"  # noqa:E501
                 )
 
     def set_file_name(self, file_name):
@@ -90,7 +90,7 @@ class FileGeneration:
 
     def randomize_dist(self):
         arrival_time = random.expovariate(1) * 20
-        self.arrival_time = round(arrival_time, 2)
+        self.arrival_time = int(arrival_time)
         self.randomize_not_dist()
 
     def randomize_not_dist(self):
