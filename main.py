@@ -1,80 +1,119 @@
-import heapq
 import sys
 import argparse
+from typing import Literal
+from math import gcd
+import heapq
+
+
+def find_lcm(values: list):
+    """helps to find lcm in the given processors"""
+    lcm = 1
+    for i in values:
+        lcm = lcm * i // gcd(lcm, i)
+    return lcm
 
 
 class Event:
-    def __init__(self, time, event_type, process_number):
+    """
+    Eevent
+    """
+
+    def __init__(self, time, event_type, process):
         self.time = time
         self.event_type = event_type
-        self.process_number = process_number
+        self.process = process
 
     def __lt__(self, other):
         return self.time < other.time
 
 
+class Processor:
+    """
+    Processor indicates the process number. also has meta data such as is busy, what's the current task is working on.
+    """
+
+    def __init__(self, number, current_task=None, busy=False) -> None:
+        self.number = number
+        self.is_busy = busy
+        self.current_task = current_task
+
+
 class Process:
+    """
+    Process indicates the process what kind of task it is. don't get confuse between the process and processor.
+    consider process also to be a task depending on situation. process can be directly attached to the processor task
+    """
+
     def __init__(self, process_number, arrival_time, relative_deadline, period):
         self.process_number = process_number
         self.arrival_time = arrival_time
         self.relative_deadline = relative_deadline
         self.period = period
-        self.remaining_time = period
-        #self.deadline = arrival_time + relative_deadline
-        self.cpu_burst = 0 #this will be generated per the given distribution
+        self.execution_time = None
 
     def __lt__(self, other):
-        return self.arrival_time < other.arrival_time
+        return self.period < other.period
 
-class Scheduler:
-    def __init__(self, process, process_switch_time, algorithm):
-        self.clock = 0
-        self.event_queue = []
-        self.processes = processes
-        self.process_switch_time = process_switch_time
-        self.algorithm = algorithm
-        self.cpu_optimization = 0
-        self.time_limit = float('inf')
+    def priority(self, algorithm: Literal["RM", "DM"]) -> float:
+        """
+        If Rm its inversely proportional to 1/period
+        If Dm its inversely proportional to 1/relative_deadline
 
-    def schedule(self):
-        while self.clock < self.time_limit and self.event_queue:
-            current_event = heapq.heappop(self.event_queue)
-            self.clock = current_event.time
+        TODO: need to do it for the leftover
 
-            if current_event.event_type == 'arrival':
-                self.handle_arrival(current_event.process_number)
-            elif current_event.event_type == 'completion':
-                self.handle_completion(current_event.process_number)
-        
-        self.calculate_statistics()
+        Args:
+            algorithm (RM| DM): define type of algorithm
 
-    def handle_arrival(self, process_number):
-        # Implement arrival event handling here based on the scheduling algorithm
-        pass
+        Returns:
+            float:priority
+        """
+        if algorithm == "RM":
+            return 1 / self.period
+        if algorithm == "DM":
+            return 1 / self.relative_deadline
 
-    def handle_completion(self, process_number):
-        # Implement completion event handling here based on the scheduling algorithm
-        pass
 
-    def calculate_statistics(self):
-        # Implement code to calculate and print statistics
-        pass
+def rate_monotonic_analysis(processes: list[Process]):
+    """helps to check weather the process are feasible or not
+    Need to verify the above
+    """
+    total_utilization = sum(
+        process.execution_time / process.period for process in processes
+    )
+    feasibility_threshold = len(processes) * (2 ** (1 / len(processes)) - 1)
 
-def generate_processes(num_processes, process_switch_time):
-    # Implement code to generate processes based on the given distribution
-    pass
+    return total_utilization, feasibility_threshold
 
-def parse_input_file(file_path):
-    # Implement code to parse input from the file
-    pass
 
-def schedule_rm(number_of_processor, processes: list[Process], process_switch: int, verbose: bool, detailed: bool,):
+def schedule_rm(
+    number_of_processor,
+    processes: list[Process],
+    process_switch: int,
+    verbose: bool,
+    detailed: bool,
+):
     """TODO: write algo"""
 
-    pass
+    # first step is to check weather fesabile or not.
+    total_utilization, feasibility_threshold = rate_monotonic_analysis(processes)
+    print(total_utilization, feasibility_threshold)
+
+    if total_utilization <= feasibility_threshold:
+        print("There is no feasible schedule produced.")
+        print(
+            f"Total Utilization: {total_utilization} < Feasibility_threshold {feasibility_threshold}"
+        )
+        return
+    print("processed")
 
 
-def schedule_dm(number_of_processor, processes, process_switch, verbose: bool, detailed: bool,):
+def schedule_dm(
+    number_of_processor,
+    processes,
+    process_switch,
+    verbose: bool,
+    detailed: bool,
+):
     """
     TODO: Write algo
     Args:
@@ -86,7 +125,13 @@ def schedule_dm(number_of_processor, processes, process_switch, verbose: bool, d
     pass
 
 
-def schedule_edf(number_of_processor, processes, process_switch, verbose: bool, detailed: bool,):
+def schedule_edf(
+    number_of_processor,
+    processes,
+    process_switch,
+    verbose: bool,
+    detailed: bool,
+):
     """
     TODO: write algo
 
@@ -99,43 +144,31 @@ def schedule_edf(number_of_processor, processes, process_switch, verbose: bool, 
     pass
 
 
-def simulate(processes, process_switch, scheduling_algorithm):
-    """
-    TODO: write simulation algo.
-    """
-
-
 def main():
     """
     Main function.
     """
     parser = argparse.ArgumentParser(description="Scheduling Simulator")
-    parser.add_argument("-d", action="store_true", help="Enable detailed information mode")
+
+    parser.add_argument(
+        "-d", action="store_true", help="Enable detailed information mode"
+    )
     parser.add_argument("-v", action="store_true", help="Enable verbose mode")
-    parser.add_argument("-a", "--algorithm", choices=["RM", "DM", "EDF"], help="Specify scheduling algorithm (RM, DM, EDF)",)
-    parser.add_argument("input_file", type=str, help="Path to the input file")
-
-    processes, process_switch_time = parse_input_file(args.input_file)
-
-    scheduler = Scheduler(processes, process_switch_time, args.a)
+    parser.add_argument(
+        "-a",
+        "--algorithm",
+        choices=["RM", "DM", "EDF"],
+        help="Specify scheduling algorithm (RM, DM, EDF)",
+    )
 
     # compile the input args
     args = parser.parse_args()
-
-    if args.d:
-        print("Detailed Information Mode Running")
-    if args.v:
-        print("Verbose Mode Running")
-
 
     # get the detailed, verbose and algorithm.
     detailed = args.d
     verbose = args.v
     algorithm = args.algorithm
 
-    scheduler.schedule()
-    
-   '''
     # read the lines
     lines = sys.stdin.readlines()
 
@@ -149,16 +182,19 @@ def main():
 
     # mapper will trigger the algorithm bassed on execution
     ALGO_MAPPER = {"RM": schedule_rm, "DM": schedule_dm, "EDF": schedule_edf}
-    ALGO_MAPPER[algorithm](
-        num_processes,
-        processes,
-        process_switch,
-        verbose,
-        detailed,
-    )
 
-    # need to write the overall simulation method over here.
-    '''
+    # algorithm gives us set of algorithm that needs to be performed.
+    if algorithm is None:
+        algorithm = ALGO_MAPPER.values()
+    else:
+        algorithm = [ALGO_MAPPER[algorithm]]
+
+    # apply multiple algo sequentially.
+    for algo in algorithm:
+        algo(num_processes, processes, process_switch, verbose, detailed)
+
+    # Finished the analysis.
+    print("analysis finished")
 
 
 if __name__ == "__main__":
