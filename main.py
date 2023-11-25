@@ -292,13 +292,15 @@ def schedule_edf(
                         ),
                     )
                     processed_events.append(event)
-                    print(
-                        f"At time {current_time}: Process {process.process_number} arrived"
-                    )
+                    if verbose:
+                        print(
+                            f"At time {current_time}: Process {process.process_number} arrived"
+                        )
 
         if waiting_queue is None and process_queue is not None:
             current_time = current_time + 1
-            print("process is idle at this time")
+            if verbose:
+                print("process is idle at this time")
             continue
 
         # execute the task in waiting que
@@ -321,6 +323,10 @@ def schedule_edf(
                     ),
                 )
                 current_event = event
+                if verbose:
+                    print(
+                        f"At time {current_time}: Process {current_event.process.process_number} is preempted by process {event.process.process_number}"
+                    )
                 continue
             else:
                 heapq.heappush(waiting_queue, (relative_deadline, event))
@@ -360,6 +366,18 @@ def schedule_edf(
                 current_event = None
 
         current_time += 1
+
+    if detailed:
+        print("\nFinal Detailed Information:")
+        for event in finished_events:
+            if event.process is not None:  # check
+                process = event.process
+                print(f"Process {process.process_number}:")
+                print(f"  arrival time: {process.arrival_time}")
+                print(f"  service time: {process.execution_time} units")
+                print(f"  relative deadline: {process.relative_deadline} units")
+                print(f"  period: {process.period} units")
+                print(f"  finish time: {event.time} units")
 
 
 def main():
