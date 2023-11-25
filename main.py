@@ -22,10 +22,13 @@ class Event:
     def __init__(self, time, event_type, process):
         self.time = time
         self.event_type = event_type
-        self.process = process
+        self.process: Process = process
 
     def __lt__(self, other):
         return self.time < other.time
+
+    def __eq__(self, __value: object) -> bool:
+        return self.process == __value.process
 
 
 class Processor:
@@ -51,7 +54,8 @@ class Process:
         self.arrival_time = arrival_time
         self.relative_deadline = relative_deadline
         self.period = period
-        self.execution_time = 100
+        self.execution_time = arrival_time + relative_deadline
+        self.remaining_time = self.execution_time
 
     def __lt__(self, other):
         return self.period < other.period
@@ -248,7 +252,7 @@ def schedule_dm(
 
 def schedule_edf(
     number_of_processors,
-    processes,
+    processes: list[Process],
     process_switch,
     verbose: bool,
     detailed: bool,
@@ -263,114 +267,99 @@ def schedule_edf(
         detail (bool): _description_
     """
     current_time = 0
+    # need to move it to the LCM
     max_time = 20
-    event_queue = []
-    processed_events = set()
-    waiting_queue = deque(processes)
-    running_completed_queue = deque()
-    processors = [Processor(i + 1) for i in range(number_of_processors)]
+    process_queue = processes
+    current_event = None
+    processed_events: list[Event] = []
+    finished_events: list[Event] = []
+    waiting_queue: list[tuple[str, Event]] = []
 
     print(f"Initial Waiting Queue: {len(waiting_queue)}")
-    print(f"Initial Running/Completed Queue: {len(running_completed_queue)}")
+    print(f"Inital processed events:{processed_events}")
 
-    while waiting_queue or running_completed_queue:
-        for process in waiting_queue:
+    while len(waiting_queue) > 1 or (len(finished_events) < len(process_queue)):
+        # check if there is any arraived process and push them into the wating heapmin que
+        for process in process_queue:
             if process.arrival_time <= current_time:
                 event = Event(process.arrival_time, "arrival", process)
                 if event not in processed_events:
-                    heapq.heappush(event_queue, event)
-                    processed_events.add(event)
+                    heapq.heappush(
+                        waiting_queue,
+                        (
+                            process.relative_deadline,
+                            event,
+                        ),
+                    )
+                    processed_events.append(event)
                     print(
                         f"At time {current_time}: Process {process.process_number} arrived"
                     )
 
-        if running_completed_queue:
-            running_completed_queue = deque(
-                sorted(running_completed_queue, key=lambda p: p.deadline)
-            )
+        if waiting_queue is None and process_queue is not None:
+            current_time = current_time + 1
+            print("process is idle at this time")
+            continue
 
-        for processor in processors:
-            if not processor.is_busy and waiting_queue:
-                task = waiting_queue.popleft()
-                task_start_time = max(current_time, task.arrival_time)
-                task_end_time = task_start_time + task.execution_time
+        # execute the task in waiting que
+        if waiting_queue:
+            relative_deadline, event = heapq.heappop(waiting_queue)
 
-                if task_start_time >= processor.last_scheduled_time + process_switch:
-                    processor.is_busy = True
-                    processor.current_task = task
-                    processor.last_scheduled_time = task_start_time
-
-                    event = Event(task_end_time, "completion", processor)
-                    if event not in processed_events:
-                        heapq.heappush(event_queue, event)
-                        processed_events.add(event)
-
-                    print(
-                        f"At time {current_time}: Task {task.process_number} is scheduled on Processor {processor.number}"
-                    )
-
-        if event_queue:
-            current_event = heapq.heappop(event_queue)
-            current_time = current_event.time
-
-            print(
-                f"At time {current_time}: Processing event {current_event.event_type}"
-            )
-
-            if current_event.event_type == "arrival":
-                task = current_event.process
-                running_completed_queue.append(task)
-
-            elif current_event.event_type == "completion":
-                processor = current_event.process
-                task = processor.current_task
-
-                processor.is_busy = False
-                processor.current_task = None
-
-                if current_time > task.deadline:
-                    print(
-                        f"At time {current_time}: Deadline miss for Task {task.process_number} on Processor {processor.number}"
-                    )
-
-                print(
-                    f"At time {current_time}: Task {task.process_number} completed on Processor {processor.number}"
+            #  condition to check if new event is required or not.
+            if current_event is None:
+                current_event = event
+            elif (
+                current_event.process.relative_deadline
+                > event.process.relative_deadline
+            ):
+                current_time = current_time + process_switch
+                heapq.heappush(
+                    waiting_queue,
+                    (
+                        relative_deadline,
+                        current_event,
+                    ),
                 )
+                current_event = event
+                continue
+            else:
+                heapq.heappush(waiting_queue, (relative_deadline, event))
 
-        task.execution_time = task_end_time - task_start_time
+            task_start_time = max(current_time, current_event.time)
 
-        if detailed:
-            print(f"At time {current_time}: Waiting queue length: {len(waiting_queue)}")
-            print(
-                f"At time {current_time}: Running/Completed queue length: {len(running_completed_queue)}"
-            )
-            print(f"At time {current_time}: Event queue length: {len(event_queue)}")
+            # check if it can schedule or not
+            if task_start_time < 100000:
+                current_event.process.remaining_time -= 1
 
-        print(f"At time {current_time}: Ending loop iteration")
+            else:
+                print(f"missed a deadline for process {current_time}")
+                break
+            # check if remaining time is 0
+            if current_event.process.remaining_time == 0:
+                print(
+                    f"process {current_event.process.process_number} finished at time {current_time}"
+                )
+                finished_events.append(current_event)
+                current_event = None
 
-        if not waiting_queue and not running_completed_queue:
-            print(
-                f"Breaking out of the loop. Waiting queue is empty, and Running/Completed queue is empty. Current time: {current_time}, Max time: {max_time}"
-            )
-            break
+        elif current_event:
+            # triggred when last event
+            # check if it can schedule or not
+            if task_start_time < 100000:
+                current_event.process.remaining_time -= 1
+            else:
+                print(f"missed a deadline for process {current_time}")
+                break
 
-        if current_time >= max_time:
-            print(
-                f"Breaking out of the loop. Current time: {current_time}, Max time: {max_time}"
-            )
-            break
+            # check if remaining time is 0
+            if current_event.process.remaining_time == 0:
+                print(
+                    f"process {current_event.process.process_number} finished at time {current_time}"
+                )
+                finished_events.append(current_event)
+                current_event = None
 
-    if detailed:
-        print("Earliest Deadline First (EDF) Scheduling Algorithm Analysis:")
-        for task in running_completed_queue:
-            print(f"Process {task.process_number}:")
-            print(f"  Arrival time: {task.arrival_time}")
-            print(f"  Service time: {task.execution_time} units")
-            print(f"  Relative deadline: {task.relative_deadline} units")
-            print(f"  Period: {task.period} units")
-            print(f"  Finish time: {task.arrival_time}, {current_time} units")
-
-    pass
+        current_time += 1
 
 
 def main():
