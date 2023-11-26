@@ -150,7 +150,9 @@ class ProcessesHelper:
         cpu_utilization = 0
         for process in processes:
             cpu_utilization += (
-                process.finish_times[0] - process.arrival_time
+                process.finish_times[0]
+                if process.finish_times
+                else 0 - process.arrival_time
             ) / process.period
         return cpu_utilization * 100
 
@@ -222,6 +224,7 @@ def schedule_edf(
     current_event = None
     finished_events: list[Event] = []
     waiting_queue: list[tuple[int, Event]] = []
+    fesable = True
 
     execution_time = ProcessesHelper.get_total_scheduling_time(processes)
     processes_availability_time = ProcessesHelper.get_process_availability_time(
@@ -257,17 +260,11 @@ def schedule_edf(
                                 temp_event,
                             ),
                         )
-                        if detailed:
-                            print(
-                                f"At time {current_time}: New Event has been created for process {temp_event.process} at arrival time {temp_event.arrival_time}"
-                            )
                 # condition where there is no process available
                 except IndexError:
                     pass
         # check for any ideal time in the processing.
         if not waiting_queue and current_event is None:
-            if detailed:
-                print(f"process is idle at this time {current_time}")
             current_time = current_time + 1
             continue
 
@@ -312,13 +309,10 @@ def schedule_edf(
                     )
                 print("There is no feasible schedule produced.")
                 print("====================================================")
-                return
+                fesable = False
+                break
             # check if remaining time is 0
             if current_event.remaining_time == 0:
-                if detailed:
-                    print(
-                        f"process {current_event.process} finished at time {current_time}"
-                    )
                 current_event.finish_time = current_time
                 current_event.process.finish_times.append(current_time)
                 finished_events.append(current_event)
@@ -339,6 +333,7 @@ def schedule_edf(
                     )
                 print("There is no feasible schedule produced.")
                 print("====================================================")
+                fesable = False
                 break
 
             # check if remaining time is 0
@@ -354,20 +349,23 @@ def schedule_edf(
 
         current_time += 1
 
-    print("There is feasible schedule produced.")
-    print(f"Total Time Required is {current_time-1} time units")
-    print(
-        f"Average Cpu Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
-    )
-    print("====================================================")
+    if fesable:
+        print("There is feasible schedule produced.")
+        print(f"Total Time Required is {current_time-1} time units")
+        print(
+            f"Average Cpu Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
+        )
+        print("====================================================")
 
     if detailed:
         for process in processes:
+            print("====================================================")
             print(f"Process {process}")
             print(f"Arrival time {process.arrival_time} units")
             print(f"relative DeadLine {process.relative_deadline} units")
             print(f"period: {process.period} units")
             print(f"finish time: {process.finish_times}")
+            print("====================================================")
 
 
 def main():
