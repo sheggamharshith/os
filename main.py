@@ -201,11 +201,151 @@ def schedule_rm(
 
 def schedule_dm(
     number_of_processors,
-    processes,
+    processes: list[Process],
     process_switch,
     verbose: bool,
     detailed: bool,
 ):
+    current_time = 0
+    process_queue = processes
+    current_event = None
+    processed_events: list[Event] = []
+    finished_events: list[Event] = []
+    waiting_queue: list[tuple[str, Event]] = []
+
+    # Perform rate monotonic analysis to check feasibility
+    total_utilization, feasibility_threshold = rate_monotonic_analysis(processes)
+
+    if total_utilization > feasibility_threshold:
+        print("There is not a feasible schedule.")
+        print(
+            f"Schedule can be feasible from time 0 to {find_lcm([process.period for process in processes])} units."
+        )
+
+        # Initialize missed_deadline_process variable
+        missed_deadline_process = None
+
+        # Loop through processes to find missed deadline
+        for process in processes:
+            if current_time >= process.deadline:
+                missed_deadline_process = process.process_number
+                break
+
+        # Print missed deadline after the loop
+        if missed_deadline_process is not None:
+            print(
+                f"At time {current_time}, process {missed_deadline_process} missed the deadline."
+            )
+        print(
+            f"From 0 to {find_lcm([process.period for process in processes])}, Total CPU time required is {total_utilization * find_lcm([process.period for process in processes]):.2f} units."
+        )
+        print(f"CPU Utilization is {total_utilization * 100:.1f}%")
+    else:
+        print("There is a feasible schedule produced.")
+        print(
+            f"Total CPU time required is {total_utilization * find_lcm([process.period for process in processes]):.2f} units."
+        )
+        print(f"CPU Utilization is {total_utilization * 100:.1f}%")
+
+    while len(waiting_queue) > 1 or (len(finished_events) < len(process_queue)):
+        for process in process_queue:
+            if process.arrival_time <= current_time:
+                event = Event(process.arrival_time, "arrival", process)
+                if event not in processed_events:
+                    heapq.heappush(
+                        waiting_queue,
+                        (
+                            process.deadline,  # Use absolute deadline for DM
+                            event,
+                        ),
+                    )
+                    processed_events.append(event)
+                    if verbose:
+                        print(
+                            f"At time {current_time}: Process {process.process_number} arrived"
+                        )
+
+        if waiting_queue is None and process_queue is not None:
+            current_time = current_time + 1
+            if verbose:
+                print("Process is idle at this time")
+            continue
+
+        if waiting_queue:
+            absolute_deadline, event = heapq.heappop(waiting_queue)
+            if current_event is None:
+                current_event = event
+            elif current_event.process.deadline > event.process.deadline:
+                current_time = current_time + process_switch
+                heapq.heappush(
+                    waiting_queue,
+                    (
+                        absolute_deadline,
+                        current_event,
+                    ),
+                )
+                current_event = event
+                if verbose:
+                    print(
+                        f"At time {current_time}: Process {current_event.process.process_number} is preempted by process {event.process.process_number}"
+                    )
+                continue
+            else:
+                heapq.heappush(waiting_queue, (absolute_deadline, event))
+
+            task_start_time = max(current_time, current_event.time)
+
+            if task_start_time < current_event.process.deadline:
+                current_event.process.remaining_time -= 1
+            else:
+                print(
+                    f"Missed a deadline for process {current_event.process.process_number} at time {current_time}"
+                )
+                break
+
+            if current_event.process.remaining_time == 0:
+                if verbose:
+                    print(
+                        f"Process {current_event.process.process_number} finished at time {current_time}"
+                    )
+                finished_events.append(current_event)
+                current_event = None
+
+        elif current_event:
+            if task_start_time < current_event.process.deadline:
+                current_event.process.remaining_time -= 1
+            else:
+                print(f"Missed a deadline for process {current_time}")
+                break
+
+            if current_event.process.remaining_time == 0:
+                if verbose:
+                    print(
+                        f"Process {current_event.process.process_number} finished at time {current_time}"
+                    )
+                finished_events.append(current_event)
+                current_event = None
+
+        current_time += 1
+
+    if detailed:
+        print("\nFinal Detailed Information:")
+        total_time_required = max(event.time for event in finished_events)
+        cpu_utilization = total_utilization * 100
+        print(f"\nTotal CPU time required is {total_time_required:.2f} units")
+        print(f"CPU Utilization is {cpu_utilization:.1f}%")
+        for event in finished_events:
+            if event.process is not None:
+                process = event.process
+                print(f"Process {process.process_number}:")
+                print(f"  arrival time: {process.arrival_time}")
+                print(
+                    f"  service time: {process.execution_time - process.remaining_time} units"
+                )
+                print(f"  relative deadline: {process.relative_deadline} units")
+                print(f"  period: {process.period} units")
+                print(f"  finish time: {event.time} units")
+
     pass
 
 
