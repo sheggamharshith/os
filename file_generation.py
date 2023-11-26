@@ -1,111 +1,34 @@
-import os
 import random
 
 
-# Define MaxProcess, change this value according your need.
-MAX_PROCESSES = 10
-# hardcoded the atleaset processor to min 5
+def generate_input_file(
+    num_processes, process_switch_time, arrival_distribution="constant"
+):
+    with open("input_file.txt", "w") as file:
+        # Write the number of processes and process switch overhead time
+        file.write(f"{num_processes} {process_switch_time}\n")
 
+        for process_number in range(1, num_processes + 1):
+            # Generate arrival time based on the specified distribution
+            if arrival_distribution == "constant":
+                arrival_time = 0
+            elif arrival_distribution == "exponential":
+                arrival_time = int(random.expovariate(1 / 20))
 
-class FileGeneration:
-    """
-    Helps to generate input file.
-    """
+            # Generate CPU burst, deadline, and period for each process
+            cpu_burst = random.randint(0,10)
+            deadline = cpu_burst + int(random.uniform(0, 10))
+            period = deadline + int(random.uniform(0, 10))
 
-    def __init__(self):
-        self.file_name = None
-        self.total_proc = 0
-        self.arrival_time = None
-        self.burst_time = None
-        self.relative_deadline = None
-        self.period = None
-
-    def generate_input_file(self, file_name, is_distributed):
-        self.total_proc = random.randint(5, MAX_PROCESSES) + 5
-        self.set_file_name(file_name)
-
-        if self.file_exists(self.file_name):
-            print("File already exists")
-        else:
-            print("Generating file ......")
-            self.generate_file(is_distributed)
-            print("file Generated")
-
-    def generate_input_file_custom(
-        self,
-        file_name,
-        total_proc,
-        is_distributed,
-    ):
-        """
-        Helps to generate file with custom total number of processor.
-
-        Args:
-            file_name (str): file name
-            total_proc (int): total number of processor.
-            is_distributed (bool): is distributed or not.
-        """
-        self.set_file_name(file_name)
-        self.set_total_proc(total_proc)
-
-        if total_proc >= 5:
-            if self.file_exists(self.file_name):
-                print("File already exists")
-            else:
-                print("Generating file ......")
-                self.generate_file(is_distributed)
-                print("File Generated")
-
-    def generate_file(self, is_distributed):
-        with open(self.file_name, "w", encoding="utf-8") as output_file:
-            if is_distributed:
-                proc_switch = 5
-            else:
-                proc_switch = 0
-
-            output_file.write(f"{self.total_proc} {proc_switch}\n")
-            print(f"{self.total_proc} {proc_switch}")
-
-            for proc_num in range(1, self.total_proc + 1):
-                if is_distributed:
-                    self.randomize_dist()
-                else:
-                    self.randomize_not_dist()
-
-                output_file.write(
-                    f"{proc_num} {self.arrival_time} {self.relative_deadline} {self.period}\n"  # noqa:E501
-                )
-                print(
-                    f"{proc_num} {self.arrival_time} {self.relative_deadline} {self.period}"  # noqa:E501
-                )
-
-    def set_file_name(self, file_name):
-        self.file_name = f"input_files/{file_name}"
-
-    def set_total_proc(self, total_proc):
-        self.total_proc = total_proc
-
-    def file_exists(self, file_name):
-        return os.path.exists(file_name)
-
-    def randomize_dist(self):
-        arrival_time = random.expovariate(1) * 20
-        self.arrival_time = int(arrival_time)
-        self.randomize_not_dist()
-
-    def randomize_not_dist(self):
-        self.burst_time = random.randint(30, 100)
-        x = random.randint(1, 500)
-        self.relative_deadline = self.burst_time + x
-        y = random.randint(1, 1000)
-        self.period = self.relative_deadline + y
+            # Write process details to the file
+            file.write(
+                f"{process_number} {arrival_time:} {deadline} {period}\n"
+            )
 
 
 if __name__ == "__main__":
-    # Example usage
-    MAX_PROCESSES = 10
-    file_generation = FileGeneration()
-    file_generation.generate_input_file("example.txt", is_distributed=True)
-    file_generation.generate_input_file_custom(
-        "example_custom.txt", total_proc=8, is_distributed=False
-    )
+    num_processes = 5
+    process_switch_time = 3  # or 5 for different switch overhead
+    arrival_distribution = "constant"  # or "exponential"
+
+    generate_input_file(num_processes, process_switch_time, arrival_distribution)
