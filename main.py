@@ -300,9 +300,6 @@ def schedule_edf(
     finished_events: list[Event] = []
     waiting_queue: list[tuple[str, Event]] = []
 
-    print(f"Initial Waiting Queue: {len(waiting_queue)}")
-    print(f"Inital processed events:{processed_events}")
-
     while len(waiting_queue) > 1 or (len(finished_events) < len(process_queue)):
         # check if there is any arraived process and push them into the wating heapmin que
         for process in process_queue:
@@ -367,9 +364,10 @@ def schedule_edf(
                 break
             # check if remaining time is 0
             if current_event.process.remaining_time == 0:
-                print(
-                    f"process {current_event.process.process_number} finished at time {current_time}"
-                )
+                if verbose:
+                    print(
+                        f"process {current_event.process.process_number} finished at time {current_time}"
+                    )
                 finished_events.append(current_event)
                 current_event = None
 
@@ -384,9 +382,10 @@ def schedule_edf(
 
             # check if remaining time is 0
             if current_event.process.remaining_time == 0:
-                print(
-                    f"process {current_event.process.process_number} finished at time {current_time}"
-                )
+                if verbose:
+                    print(
+                        f"process {current_event.process.process_number} finished at time {current_time}"
+                    )
                 finished_events.append(current_event)
                 current_event = None
 
