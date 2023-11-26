@@ -11,7 +11,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["-a","EDF","input_files/example.txt"]
+            "args": ["-d","-a","EDF","input_file.txt"]
         }
     ]
 }
