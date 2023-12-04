@@ -65,7 +65,7 @@ class Event:
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time = dead_line - arrival_time
+        self.remaining_time  = 1
         self.finish_time: int | None = None
 
     def __lt__(self, other):
@@ -177,6 +177,29 @@ def rate_monotonic_analysis(processes: list[Process]):
     return total_utilization, feasibility_threshold
 
 
+def check_necessary_condition_for_edf(process: list[Process]):
+    """
+    helps to check the feasibility condition.
+
+    Args:
+        process (list[Process]): _description_
+    """
+    return sum(process.execution_time / process.period for process in process) < 1
+
+
+def check_feasibility_condition_for_edf(process: list[Process]):
+    """
+    helps to check the necessary condition.
+
+    Args:
+        process (list[Process]): _description_
+    """
+    return (
+        sum(process.execution_time / process.relative_deadline for process in process)
+        < 1
+    )
+
+
 def schedule_rm(
     number_of_processor,
     processes: list[Process],
@@ -200,12 +223,22 @@ def schedule_rm(
 
 
 def schedule_dm(
-    number_of_processors,
+    number_of_processors: int,
     processes: list[Process],
-    process_switch,
+    process_switch: int,
     verbose: bool,
     detailed: bool,
 ):
+    """
+    helps to schedule the dm.
+
+    Args:
+        number_of_processors (int): helps to number of processor.
+        processes (list[Process]): list of process
+        process_switch (int): process switch time
+        verbose (bool): to display more log
+        detailed (bool): detailed log flag
+    """
     current_time = 0
     process_queue = processes
     current_event = None
@@ -350,9 +383,9 @@ def schedule_dm(
 
 
 def schedule_edf(
-    number_of_processors,
+    number_of_processors: int,
     processes: list[Process],
-    process_switch,
+    process_switch: int,
     verbose: bool,
     detailed: bool,
 ):
@@ -360,7 +393,7 @@ def schedule_edf(
     print("====================================================")
     print("Earliest Deadline First(EDF):")
 
-    current_time = 0
+    current_time = 1
     current_event = None
     finished_events: list[Event] = []
     waiting_queue: list[tuple[int, Event]] = []
@@ -371,6 +404,18 @@ def schedule_edf(
         processes
     )
     processes_deadline_time = ProcessesHelper.get_process_deadline_time(processes)
+
+    # TODO: write fessabilty check.
+
+    feasibility = check_feasibility_condition_for_edf(processes)
+    necessary = check_necessary_condition_for_edf(processes)
+
+    if not feasibility and not necessary:
+        print("Fesibility and necessary condition not stisfied")
+
+    if not feasibility and necessary:
+        # keep it provides why it can be failed
+        print("If it satisfies necessary condition, but fails sufficient condition")
 
     while current_time <= execution_time:
         # check if there is any arrived process and push them into the waiting heap-min que
@@ -400,6 +445,7 @@ def schedule_edf(
                                 temp_event,
                             ),
                         )
+                        del temp_event
                 # condition where there is no process available
                 except IndexError:
                     pass
@@ -429,16 +475,14 @@ def schedule_edf(
                         current_event,
                     ),
                 )
-                current_event = temp_event
+                current_event = future_event
                 continue
             else:
-                heapq.heappush(waiting_queue, (relative_deadline, temp_event))
+                heapq.heappush(waiting_queue, (relative_deadline, future_event))
 
             # check if it can schedule or not
-            #
-            if current_event.dead_line > current_time - 1:
+            if current_event.dead_line >= current_time:
                 current_event.remaining_time -= 1
-
             else:
                 if detailed:
                     print(
@@ -478,10 +522,6 @@ def schedule_edf(
 
             # check if remaining time is 0
             if current_event.remaining_time == 0:
-                if detailed:
-                    print(
-                        f"process {current_event.process} finished at time {current_time}"
-                    )
                 current_event.finish_time = current_time
                 current_event.process.finish_times.append(current_time)
                 finished_events.append(current_event)
