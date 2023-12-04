@@ -65,7 +65,7 @@ class Event:
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time  = 1
+        self.remaining_time = 1
         self.finish_time: int | None = None
 
     def __lt__(self, other):
@@ -171,7 +171,9 @@ def rate_monotonic_analysis(processes: list[Process]):
 
     # Check if the length of processes is not zero before performing division
     feasibility_threshold = (
-        len(processes) * (2 ** (1 / len(processes)) - 1) if len(processes) > 0 else 0
+        (len(processes) * ((2 ** (1 / len(processes))) - 1))
+        if len(processes) > 0
+        else 0
     )
 
     return total_utilization, feasibility_threshold
@@ -239,76 +241,68 @@ def schedule_dm(
         verbose (bool): to display more log
         detailed (bool): detailed log flag
     """
-    current_time = 0
-    process_queue = processes
+    print("====================================================")
+    print("Deadline Monotonic Scheduling Algorithm(DM):")
+    print("====================================================")
+
+    current_time = 1
     current_event = None
-    processed_events: list[Event] = []
     finished_events: list[Event] = []
-    waiting_queue: list[tuple[str, Event]] = []
+    waiting_queue: list[tuple[int, Event]] = []
+    feasible = True
 
-    # Perform rate monotonic analysis to check feasibility
+    # Feasibility check using Deadline Monotonic Analysis
     total_utilization, feasibility_threshold = rate_monotonic_analysis(processes)
-
+    # Check if the system is feasible for scheduling
     if total_utilization > feasibility_threshold:
-        print("There is not a feasible schedule.")
-        print(
-            f"Schedule can be feasible from time 0 to {find_lcm([process.period for process in processes])} units."
-        )
+        feasible = False
+        print("There is no feasible schedule produced.")
+        # print(
+        #    f"Schedule can be feasible from time 0 to {find_lcm([process.period for process in processes])} units."
+        # )
 
-        # Initialize missed_deadline_process variable
-        missed_deadline_process = None
+    execution_time = ProcessesHelper.get_total_scheduling_time(processes)
+    processes_availability_time = ProcessesHelper.get_process_availability_time(
+        processes
+    )
+    processes_deadline_time = ProcessesHelper.get_process_deadline_time(processes)
 
-        # Loop through processes to find missed deadline
-        for process in processes:
-            if current_time >= process.deadline:
-                missed_deadline_process = process.process_number
-                break
-
-        # Print missed deadline after the loop
-        if missed_deadline_process is not None:
-            print(
-                f"At time {current_time}, process {missed_deadline_process} missed the deadline."
-            )
-        print(
-            f"From 0 to {find_lcm([process.period for process in processes])}, Total CPU time required is {total_utilization * find_lcm([process.period for process in processes]):.2f} units."
-        )
-        print(f"CPU Utilization is {total_utilization * 100:.1f}%")
-    else:
-        print("There is a feasible schedule produced.")
-        print(
-            f"Total CPU time required is {total_utilization * find_lcm([process.period for process in processes]):.2f} units."
-        )
-        print(f"CPU Utilization is {total_utilization * 100:.1f}%")
-
-    while len(waiting_queue) > 1 or (len(finished_events) < len(process_queue)):
-        for process in process_queue:
-            if process.arrival_time <= current_time:
-                event = Event(process.arrival_time, "arrival", process)
-                if event not in processed_events:
-                    heapq.heappush(
-                        waiting_queue,
-                        (
-                            process.deadline,  # Use absolute deadline for DM
-                            event,
-                        ),
-                    )
-                    processed_events.append(event)
-                    if verbose:
-                        print(
-                            f"At time {current_time}: Process {process.process_number} arrived"
+    while current_time <= execution_time:
+        if current_time <= execution_time:
+            for process in processes:
+                try:
+                    if (
+                        processes_availability_time[process.process_number][0]
+                        <= current_time
+                    ) and (current_time - 1) + process.execution_time <= execution_time:
+                        temp_event = Event(
+                            processes_availability_time[process.process_number][0],
+                            process,
+                            processes_deadline_time[process.process_number][0],
                         )
+                        del processes_availability_time[process.process_number][0]
+                        del processes_deadline_time[process.process_number][0]
 
-        if waiting_queue is None and process_queue is not None:
+                        heapq.heappush(
+                            waiting_queue,
+                            (
+                                temp_event.dead_line,
+                                temp_event,
+                            ),
+                        )
+                        del temp_event
+                except IndexError:
+                    pass
+
+        if not waiting_queue and current_event is None:
             current_time = current_time + 1
-            if verbose:
-                print("Process is idle at this time")
             continue
 
         if waiting_queue:
-            absolute_deadline, event = heapq.heappop(waiting_queue)
+            absolute_deadline, future_event = heapq.heappop(waiting_queue)
             if current_event is None:
-                current_event = event
-            elif current_event.process.deadline > event.process.deadline:
+                current_event = future_event
+            elif future_event < current_event:
                 current_time = current_time + process_switch
                 heapq.heappush(
                     waiting_queue,
@@ -317,67 +311,83 @@ def schedule_dm(
                         current_event,
                     ),
                 )
-                current_event = event
+                current_event = future_event
                 if verbose:
                     print(
-                        f"At time {current_time}: Process {current_event.process.process_number} is preempted by process {event.process.process_number}"
+                        f"At time {current_time}: Process {current_event.process.process_number} is preempted by process with {future_event.process.process_number}"
                     )
                 continue
             else:
-                heapq.heappush(waiting_queue, (absolute_deadline, event))
+                heapq.heappush(waiting_queue, (absolute_deadline, future_event))
 
-            task_start_time = max(current_time, current_event.time)
-
-            if task_start_time < current_event.process.deadline:
-                current_event.process.remaining_time -= 1
+            if current_event.dead_line >= current_time:
+                current_event.remaining_time -= 1
             else:
+                print(f"Schedule can be feasible from time 0 to {current_time}")
                 print(
-                    f"Missed a deadline for process {current_event.process.process_number} at time {current_time}"
+                    f"At time {current_time} units: process {current_event.process} missed the deadline."
                 )
+                print("====================================================")
+                fesable = False
                 break
 
-            if current_event.process.remaining_time == 0:
+            if current_event.remaining_time == 0:
+                current_event.finish_time = current_time
                 if verbose:
                     print(
                         f"Process {current_event.process.process_number} finished at time {current_time}"
                     )
+                current_event.process.finish_times.append(current_time)
                 finished_events.append(current_event)
                 current_event = None
 
         elif current_event:
-            if task_start_time < current_event.process.deadline:
-                current_event.process.remaining_time -= 1
+            if current_event.dead_line > current_time:
+                current_event.remaining_time -= 1
             else:
-                print(f"Missed a deadline for process {current_time}")
+                print(f"Schedule can be feasible from time 0 to {current_time}")
+                print(
+                    f"At time {current_time} units: process {current_event.process} missed the deadline."
+                )
+                fesable = False
                 break
 
-            if current_event.process.remaining_time == 0:
+            if current_event.remaining_time == 0:
+                current_event.finish_time = current_time
                 if verbose:
                     print(
                         f"Process {current_event.process.process_number} finished at time {current_time}"
                     )
+                current_event.process.finish_times.append(current_time)
                 finished_events.append(current_event)
                 current_event = None
 
         current_time += 1
 
+    if feasible:
+        print("There is a feasible schedule produced.")
+        print(f"Total Time Required is {current_time-1} time units")
+        print(
+            f"CPU Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))}%"
+        )
+        print("====================================================")
+
     if detailed:
         print("\nFinal Detailed Information:")
-        total_time_required = max(event.time for event in finished_events)
         cpu_utilization = total_utilization * 100
-        print(f"\nTotal CPU time required is {total_time_required:.2f} units")
+        print(f"Total CPU time required is {current_time-1} units")
         print(f"CPU Utilization is {cpu_utilization:.1f}%")
-        for event in finished_events:
-            if event.process is not None:
-                process = event.process
-                print(f"Process {process.process_number}:")
-                print(f"  arrival time: {process.arrival_time}")
-                print(
-                    f"  service time: {process.execution_time - process.remaining_time} units"
-                )
-                print(f"  relative deadline: {process.relative_deadline} units")
-                print(f"  period: {process.period} units")
-                print(f"  finish time: {event.time} units")
+        print("====================================================")
+        for process in processes:
+            print(f"Process {process}")
+            print(f"Arrival time {process.arrival_time} units")
+            print(
+                f"Service time: {process.finish_times[-1] - process.arrival_time} units"
+            )
+            print(f"Relative Deadline {process.relative_deadline} units")
+            print(f"Period: {process.period} units")
+            print(f"Finish time: {process.finish_times}")
+            print("====================================================")
 
     pass
 
@@ -411,7 +421,9 @@ def schedule_edf(
     necessary = check_necessary_condition_for_edf(processes)
 
     if not feasibility and not necessary:
-        print("Fesibility and necessary condition not stisfied")
+        print(
+            "Fesibility and necessary condition not stisfied, checking condition with lcm"
+        )
 
     if not feasibility and necessary:
         # keep it provides why it can be failed
