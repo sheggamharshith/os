@@ -157,6 +157,26 @@ class ProcessesHelper:
             ) / process.period
         return cpu_utilization * 100
 
+    @staticmethod
+    def calculate_total_service_time(processes: list[Process]) -> int:
+        """
+        Calculate the total service time for a list of processes.
+
+        Args:
+            processes (list[Process]): List of processes.
+
+        Returns:
+            int: Total service time.
+        """
+        # Get the last finish time for each process and return the maximum
+        # last_finish_times = [
+        #    process.finish_times[-1] for process in processes if process.finish_times
+        # ]
+        # return max(last_finish_times, default=0)
+        return (
+            max(process.finish_times[-1] for process in processes) if processes else 0
+        )
+
 
 def rate_monotonic_analysis(processes: list[Process]):
     """helps to check weather the process are feasible or not
@@ -250,17 +270,10 @@ def schedule_dm(
     current_event = None
     finished_events: list[Event] = []
     waiting_queue: list[tuple[int, Event]] = []
+    finished_events: list[Event] = []
     feasible = True
-
-    # Feasibility check using Deadline Monotonic Analysis
-    total_utilization, feasibility_threshold = rate_monotonic_analysis(processes)
-    # Check if the system is feasible for scheduling
-    if total_utilization > feasibility_threshold:
-        feasible = False
-        print("There is no feasible schedule produced.")
-        # print(
-        #    f"Schedule can be feasible from time 0 to {find_lcm([process.period for process in processes])} units."
-        # )
+    # List to store missed deadlines
+    missed_deadlines = []
 
     execution_time = ProcessesHelper.get_total_scheduling_time(processes)
     processes_availability_time = ProcessesHelper.get_process_availability_time(
@@ -324,12 +337,8 @@ def schedule_dm(
             if current_event.dead_line >= current_time:
                 current_event.remaining_time -= 1
             else:
-                print(f"Schedule can be feasible from time 0 to {current_time}")
-                print(
-                    f"At time {current_time} units: process {current_event.process} missed the deadline."
-                )
-                print("====================================================")
-                fesable = False
+                missed_deadlines.append((current_time, current_event.process))
+                feasible = False
                 break
 
             if current_event.remaining_time == 0:
@@ -343,14 +352,11 @@ def schedule_dm(
                 current_event = None
 
         elif current_event:
-            if current_event.dead_line > current_time:
+            if current_event.dead_line >= current_time:
                 current_event.remaining_time -= 1
             else:
-                print(f"Schedule can be feasible from time 0 to {current_time}")
-                print(
-                    f"At time {current_time} units: process {current_event.process} missed the deadline."
-                )
-                fesable = False
+                missed_deadlines.append((current_time, current_event.process))
+                feasible = False
                 break
 
             if current_event.remaining_time == 0:
@@ -365,29 +371,46 @@ def schedule_dm(
 
         current_time += 1
 
-    if feasible:
-        print("There is a feasible schedule produced.")
+    # Calculate total service time using helper method
+    total_service_time = ProcessesHelper.calculate_total_service_time(processes)
+
+    # Check feasibility using the total service time
+    if total_service_time > execution_time:
+        print("There is feasible schedule produced.")
         print(f"Total Time Required is {current_time-1} time units")
         print(
-            f"CPU Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))}%"
+            f"CPU Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
+        )
+        print("====================================================")
+    else:
+        print(
+            f"There is not a feasible schedule. Schedule can be feasible from time 0 to {total_service_time}."
+        )
+        for missed_time, missed_process in missed_deadlines:
+            print(
+                f"At time {missed_time} units: process {missed_process} missed the deadline."
+            )
+        print(
+            f"From time 0 to {total_service_time}, Total CPU time required is INPUT time units"
+        )
+        print(
+            f"Average Cpu Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
         )
         print("====================================================")
 
     if detailed:
         print("\nFinal Detailed Information:")
-        cpu_utilization = total_utilization * 100
-        print(f"Total CPU time required is {current_time-1} units")
-        print(f"CPU Utilization is {cpu_utilization:.1f}%")
         print("====================================================")
         for process in processes:
             print(f"Process {process}")
             print(f"Arrival time {process.arrival_time} units")
-            print(
-                f"Service time: {process.finish_times[-1] - process.arrival_time} units"
-            )
+            # print(
+            #    f"Service time: {process.finish_times[-1] - process.arrival_time} units"
+            # )
             print(f"Relative Deadline {process.relative_deadline} units")
             print(f"Period: {process.period} units")
-            print(f"Finish time: {process.finish_times}")
+            finished_times_str = [f"{time} units" for time in process.finish_times]
+            print(f"Finish time: {finished_times_str}")
             print("====================================================")
 
     pass
