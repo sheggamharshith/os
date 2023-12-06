@@ -16,18 +16,21 @@ def generate_input_file(
                 arrival_time = int(random.expovariate(1 / 20))
 
             # Generate CPU burst, deadline, and period for each process
-            cpu_burst = random.randint(0,10)
+            cpu_burst = random.randint(0, 10)
             deadline = cpu_burst + int(random.uniform(0, 10))
             period = deadline + int(random.uniform(0, 10))
+            service = deadline - int(random.uniform(0, 10))
+            if service <= 0:
+                service = deadline - int(random.uniform(0, 10))
 
             # Write process details to the file
             file.write(
-                f"{process_number} {arrival_time:} {deadline} {period}\n"
+                f"{process_number} {arrival_time:} {deadline} {period} {service}\n"
             )
 
 
 if __name__ == "__main__":
-    num_processes = 5
+    num_processes = 8
     process_switch_time = 3  # or 5 for different switch overhead
     arrival_distribution = "constant"  # or "exponential"
 
