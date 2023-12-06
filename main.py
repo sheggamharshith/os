@@ -1,4 +1,5 @@
 import argparse
+import sys
 from typing import Literal
 from math import gcd
 import heapq
@@ -65,7 +66,7 @@ class Event:
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time  = 1
+        self.remaining_time = 1
         self.finish_time: int | None = None
 
     def __lt__(self, other):
@@ -565,7 +566,7 @@ def main():
         help="Specify scheduling algorithm (RM, DM, EDF)",
     )
 
-    parser.add_argument("input_file", help="Path to the input file")
+    parser.add_argument("input_file", nargs="?", help="Path to the input file")
 
     # compile the input args
     args = parser.parse_args()
@@ -576,11 +577,11 @@ def main():
     algorithm = args.algorithm
     input_file = args.input_file
 
-    # read the lines
-    # lines = sys.stdin.readlines()
-
-    with open(input_file, "r") as file:
-        lines = file.readlines()
+    if args.input_file:
+        with open(input_file, "r") as file:
+            lines = file.readlines()
+    else:
+        lines = sys.stdin.readlines()
 
     # get the number of processor and processor switch
     num_processes, process_switch = map(int, lines[0].strip().split())
