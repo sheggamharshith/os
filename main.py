@@ -446,7 +446,7 @@ def schedule_edf(
     necessary = check_necessary_condition_for_edf(processes)
 
     if not feasibility and not necessary:
-        pass
+        print("Fesibility and necessary condition not stisfied")
 
     if not feasibility and necessary:
         # keep it provides why it can be failed
