@@ -19,13 +19,14 @@ class Process:
     consider process also to be a task depending on situation. process can be directly attached to the processor task
     """
 
-    def __init__(self, process_number, arrival_time, relative_deadline, period):
+    def __init__(
+        self, process_number, arrival_time, execution_time, relative_deadline, period
+    ):
         self.process_number = process_number
         self.arrival_time = arrival_time
         self.relative_deadline = relative_deadline
         self.period = period
-        self.execution_time = relative_deadline - arrival_time
-        self.remaining_time = self.execution_time
+        self.execution_time = execution_time
         self.finish_times = []
 
     def __lt__(self, other):
@@ -65,7 +66,7 @@ class Event:
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time  = 1
+        self.remaining_time = process.execution_time
         self.finish_time: int | None = None
 
     def __lt__(self, other):
@@ -411,7 +412,7 @@ def schedule_edf(
     necessary = check_necessary_condition_for_edf(processes)
 
     if not feasibility and not necessary:
-        print("Fesibility and necessary condition not stisfied")
+        pass
 
     if not feasibility and necessary:
         # keep it provides why it can be failed
