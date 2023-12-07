@@ -67,7 +67,7 @@ class Event:
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time = process.execution_time
+        self.remaining_time = 1
         self.finish_time: int | None = None
 
     def __lt__(self, other):
@@ -446,7 +446,9 @@ def schedule_edf(
     necessary = check_necessary_condition_for_edf(processes)
 
     if not feasibility and not necessary:
-        print("Fesibility and necessary condition not stisfied")
+        print(
+            "Fesibility and necessary condition not stisfied, checking condition with lcm"
+        )
 
     if not feasibility and necessary:
         # keep it provides why it can be failed
