@@ -147,16 +147,15 @@ class ProcessesHelper:
         return result
 
     @staticmethod
-    def get_average_cpu_utilization_time(processes: list[Process]):
-        """ "Helps to get average cpu utilization"""
-        cpu_utilization = 0
-        for process in processes:
-            cpu_utilization += (
-                process.finish_times[0]
-                if process.finish_times
-                else 0 - process.arrival_time
-            ) / process.period
-        return cpu_utilization * 100
+    def get_average_cpu_utilization_time(processes: list[Process], total_time: int):
+        """Helps to get average cpu utilization"""
+        total_execution_time = sum(
+            process.finish_times[-1]
+            if process.finish_times
+            else 0 - process.arrival_time
+            for process in processes
+        )
+        return (total_execution_time / total_time) * 100
 
     @staticmethod
     def calculate_total_service_time(processes: list[Process]) -> int:
@@ -177,6 +176,19 @@ class ProcessesHelper:
         return (
             max(process.finish_times[-1] for process in processes) if processes else 0
         )
+
+    @staticmethod
+    def calculate_total_cpu_time(processes: list[Process]) -> int:
+        """
+        Calculate the total CPU time for a list of processes.
+
+        Args:
+            processes (List[Process]): List of processes.
+
+        Returns:
+            int: Total CPU time.
+        """
+        return sum(process.execution_time for process in processes)
 
 
 def rate_monotonic_analysis(processes: list[Process]):
@@ -267,151 +279,100 @@ def schedule_dm(
     print("Deadline Monotonic Scheduling Algorithm(DM):")
     print("====================================================")
 
-    current_time = 1
-    current_event = None
-    finished_events: list[Event] = []
-    waiting_queue: list[tuple[int, Event]] = []
-    finished_events: list[Event] = []
-    feasible = True
-    # List to store missed deadlines
-    missed_deadlines = []
+    # Initialize the simulation clock, job queue, and event queue
+    clock = 0
+    job_queue = processes.copy()
+    event_queue = []
+    finished_queue = []
 
-    execution_time = ProcessesHelper.get_total_scheduling_time(processes)
-    processes_availability_time = ProcessesHelper.get_process_availability_time(
-        processes
-    )
-    processes_deadline_time = ProcessesHelper.get_process_deadline_time(processes)
+    # Use heap sort to build a min-heap based on relative deadlines
+    heapq.heapify(job_queue)
 
-    while current_time <= execution_time:
-        if current_time <= execution_time:
-            for process in processes:
-                try:
-                    if (
-                        processes_availability_time[process.process_number][0]
-                        <= current_time
-                    ) and (current_time - 1) + process.execution_time <= execution_time:
-                        temp_event = Event(
-                            processes_availability_time[process.process_number][0],
-                            process,
-                            processes_deadline_time[process.process_number][0],
-                        )
-                        del processes_availability_time[process.process_number][0]
-                        del processes_deadline_time[process.process_number][0]
+    # Main simulation loop
 
-                        heapq.heappush(
-                            waiting_queue,
-                            (
-                                temp_event.dead_line,
-                                temp_event,
-                            ),
-                        )
-                        del temp_event
-                except IndexError:
-                    pass
+    while job_queue:
+        # Get the next job from the job queue
+        current_job = heapq.heappop(job_queue)
 
-        if not waiting_queue and current_event is None:
-            current_time = current_time + 1
+        # Check for deadline miss
+        if clock > current_job.relative_deadline:
+            print("There is not a feasible schedule.")
+            print(f"Schedule can be feasible from time 0 to {clock} units.")
+            print(
+                f"At time {clock} units, process {current_job.process_number} missed the deadline."
+            )
+
+            # Calculate and print statistics
+            total_cpu_time_required = ProcessesHelper.calculate_total_service_time(
+                processes
+            )
+            cpu_utilization = ProcessesHelper.get_average_cpu_utilization_time(
+                processes, clock
+            )
+            print(
+                f"From 0 to {clock}, Total CPU time required is {total_cpu_time_required} units"
+            )
+            print(f"CPU Utilization is {cpu_utilization:.1f}%")
+            return
+
+        # Schedule the process for execution
+        current_job.finish_times.append(clock + current_job.execution_time)
+
+        # Check if the process has completed its execution
+        if current_job.execution_time == 0:
+            finished_queue.append(current_job)
             continue
 
-        if waiting_queue:
-            absolute_deadline, future_event = heapq.heappop(waiting_queue)
-            if current_event is None:
-                current_event = future_event
-            elif future_event < current_event:
-                current_time = current_time + process_switch
-                heapq.heappush(
-                    waiting_queue,
-                    (
-                        absolute_deadline,
-                        current_event,
-                    ),
+        # Update the remaining execution time for the process
+        current_job.execution_time -= 1
+
+        # Add the next event for the process to the event queue
+        next_event_time = clock + 1
+        next_event_deadline = current_job.relative_deadline + next_event_time
+        heapq.heappush(
+            event_queue, Event(next_event_time, current_job, next_event_deadline)
+        )
+
+        # Process events and update the simulation clock
+        while event_queue and event_queue[0].arrival_time <= next_event_time:
+            current_event = heapq.heappop(event_queue)
+            clock = current_event.arrival_time
+
+            # Update the remaining time for the process in the event
+            current_event.remaining_time -= 1
+
+            # Add the event back to the event queue if it is not completed
+            if current_event.remaining_time > 0:
+                heapq.heappush(event_queue, current_event)
+
+        # Print preemption event if verbose mode is enabled
+        if job_queue and job_queue[0].relative_deadline < next_event_deadline:
+            preempted_process = job_queue[0]
+            if verbose:
+                print(
+                    f"At time {next_event_time}: Process {current_job.process_number} is preempted by process {preempted_process}"
                 )
-                current_event = future_event
-                if verbose:
-                    print(
-                        f"At time {current_time}: Process {current_event.process.process_number} is preempted by process with {future_event.process.process_number}"
-                    )
-                continue
-            else:
-                heapq.heappush(waiting_queue, (absolute_deadline, future_event))
 
-            if current_event.dead_line >= current_time:
-                current_event.remaining_time -= 1
-            else:
-                missed_deadlines.append((current_time, current_event.process))
-                feasible = False
-                break
-
-            if current_event.remaining_time == 0:
-                current_event.finish_time = current_time
-                if verbose:
-                    print(
-                        f"Process {current_event.process.process_number} finished at time {current_time}"
-                    )
-                current_event.process.finish_times.append(current_time)
-                finished_events.append(current_event)
-                current_event = None
-
-        elif current_event:
-            if current_event.dead_line >= current_time:
-                current_event.remaining_time -= 1
-            else:
-                missed_deadlines.append((current_time, current_event.process))
-                feasible = False
-                break
-
-            if current_event.remaining_time == 0:
-                current_event.finish_time = current_time
-                if verbose:
-                    print(
-                        f"Process {current_event.process.process_number} finished at time {current_time}"
-                    )
-                current_event.process.finish_times.append(current_time)
-                finished_events.append(current_event)
-                current_event = None
-
-        current_time += 1
-
-    # Calculate total service time using helper method
     total_service_time = ProcessesHelper.calculate_total_service_time(processes)
 
-    # Check feasibility using the total service time
-    if total_service_time > execution_time:
-        print("There is feasible schedule produced.")
-        print(f"Total Time Required is {current_time-1} time units")
-        print(
-            f"CPU Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
-        )
-        print("====================================================")
-    else:
-        print(
-            f"There is not a feasible schedule. Schedule can be feasible from time 0 to {total_service_time}."
-        )
-        for missed_time, missed_process in missed_deadlines:
-            print(
-                f"At time {missed_time} units: process {missed_process} missed the deadline."
-            )
-        print(
-            f"From time 0 to {total_service_time}, Total CPU time required is INPUT time units"
-        )
-        print(
-            f"Average Cpu Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
-        )
-        print("====================================================")
+    print("There is feasible schedule produced.")
+    print(f"Total Time Required is {next_event_time-1} time units")
+    print(
+        f"CPU Utilization is {int((total_service_time / (next_event_time - 1)) * 100)} %"
+    )
+    print("====================================================")
 
     if detailed:
         print("\nFinal Detailed Information:")
         print("====================================================")
         for process in processes:
             print(f"Process {process}")
-            print(f"Arrival time {process.arrival_time} units")
-            # print(
-            #    f"Service time: {process.finish_times[-1] - process.arrival_time} units"
-            # )
-            print(f"Relative Deadline {process.relative_deadline} units")
+            print(f"Arrival time: {process.arrival_time} units")
+            print(f"Service time: {process.execution_time} units")
+            print(f"Relative Deadline: {process.relative_deadline} units")
             print(f"Period: {process.period} units")
             finished_times_str = [f"{time} units" for time in process.finish_times]
-            print(f"Finish time: {finished_times_str}")
+            print(f"Finish times: {', '.join(finished_times_str)}")
             print("====================================================")
 
     pass
