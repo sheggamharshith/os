@@ -60,14 +60,14 @@ class Process:
 
 class Event:
     """
-    Eevent
+    Event
     """
 
     def __init__(self, arrival_time: int, process: Process, dead_line: int):
         self.arrival_time = arrival_time
         self.process = process
         self.dead_line = dead_line
-        self.remaining_time = 1
+        self.remaining_time = process.execution_time
         self.finish_time: int | None = None
 
     def __lt__(self, other):
