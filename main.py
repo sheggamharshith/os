@@ -3,7 +3,6 @@ import sys
 from typing import Literal
 from math import gcd
 import heapq
-from typing import Literal
 from enum import Enum
 
 
