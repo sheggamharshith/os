@@ -3,10 +3,16 @@ import sys
 from typing import Literal
 from math import gcd
 import heapq
-from collections import defaultdict
+from enum import Enum
 
 
-def find_lcm(values: list):
+class EventTypeEnum(Enum):
+    arrival = "arrival"
+    completed = "completed"
+    preemption = "preemption"
+
+
+def get_lcm(values: list):
     """helps to find lcm in the given processors"""
     lcm = 1
     for i in values:
@@ -30,8 +36,16 @@ class Process:
         self.execution_time = execution_time
         self.finish_times = []
 
+    def get_process_finish_time(self):
+        """_"""
+
+        temp = ""
+        for time in self.finish_times:
+            temp += f"{time} units, "
+        return temp
+
     def __lt__(self, other):
-        return self.period < other.period
+        return self.arrival_time < other.arrival_time
 
     def __str__(self) -> str:
         return f"P{self.process_number}"
@@ -68,10 +82,13 @@ class Event:
         self.process = process
         self.dead_line = dead_line
         self.remaining_time = process.execution_time
+        self.event_type: EventTypeEnum = EventTypeEnum.arrival
         self.finish_time: int | None = None
 
     def __lt__(self, other):
-        return self.dead_line < other.dead_line
+        return (
+            self.arrival_time < other.arrival_time and self.dead_line < other.dead_line
+        )
 
     def __eq__(self, other) -> bool:
         return self.process == other.process and self.arrival_time == other.arrival_time  # type: ignore
@@ -83,68 +100,15 @@ class Event:
         return f"P{self.process.process_number} at AT {self.arrival_time} RT {self.remaining_time} FT {self.finish_time}"
 
 
+class DeadLineNotMeetError(Exception):
+    "raises when deadline is not meet"
+
+    def __init__(self, event: Event) -> None:
+        self.event = event
+
+
 class ProcessesHelper:
     """_"""
-
-    @staticmethod
-    def get_total_scheduling_time(processes: list[Process]):
-        """
-        Helps to calculate the total scheduling time. This will helps ous to run the process
-        in nu
-        """
-        arrival_times = [process.arrival_time for process in processes]
-        process_periods = [process.period for process in processes]
-
-        #  if the arrival time is same then follow the lcm method
-        isSame = all(
-            [arrival_times[0] == arrival_time for arrival_time in arrival_times]
-        )
-
-        if isSame:
-            return arrival_times[0] + find_lcm(process_periods)
-        else:
-            return max(arrival_times) + 2 * find_lcm(process_periods)
-
-    @staticmethod
-    def get_process_availability_time(processes: list[Process]):
-        """
-        helps to get the availabilty of process
-        """
-        total_schedule_time = ProcessesHelper.get_total_scheduling_time(processes)
-        result = defaultdict(list)  # type:ignore
-
-        for process in processes:
-            arrival_time = process.arrival_time
-            period = process.period
-            period_iteration = 0
-            available_time = arrival_time + (period_iteration * period)
-            while available_time <= total_schedule_time:
-                result[process.process_number].append(available_time)
-                period_iteration += 1
-                available_time = arrival_time + (period_iteration * period)
-
-        return result
-
-    @staticmethod
-    def get_process_deadline_time(processes: list[Process]):
-        """
-        Helps to get deadline
-        """
-        process_availability_timings = ProcessesHelper.get_process_availability_time(
-            processes
-        )
-        result = defaultdict(list)  # type:ignore
-
-        for process in processes:
-            deadline_time = process.relative_deadline + process.arrival_time
-            period = process.period
-
-            while len(result[process.process_number]) != len(
-                process_availability_timings[process.process_number]
-            ):
-                result[process.process_number].append(deadline_time)
-                deadline_time += period
-        return result
 
     @staticmethod
     def get_average_cpu_utilization_time(processes: list[Process], total_time: int):
@@ -378,172 +342,359 @@ def schedule_dm(
     pass
 
 
-def schedule_edf(
-    number_of_processors: int,
-    processes: list[Process],
-    process_switch: int,
-    verbose: bool,
-    detailed: bool,
-):
-    """ """
-    print("====================================================")
-    print("Earliest Deadline First(EDF):")
+class EdfScheduler:
+    """_"""
 
-    current_time = 1
-    current_event = None
-    finished_events: list[Event] = []
-    waiting_queue: list[tuple[int, Event]] = []
-    fesable = True
+    def __init__(
+        self,
+        num_processes: int,
+        processes: list[Process],
+        process_switch: int,
+        verbose: bool,
+        detailed: bool,
+    ):
+        self.current_time = 0
+        self.current_event: None | Event = None
+        self.finished_events: list[Event] = []
+        self.waiting_queue: list[Event] = []
+        self.fesable = True
+        self.processes = processes
+        self.num_process = num_processes
+        self.process_switch = process_switch
+        self.verbose = verbose
+        self.detailed = detailed
+        self.lcm = 100
 
-    execution_time = ProcessesHelper.get_total_scheduling_time(processes)
-    processes_availability_time = ProcessesHelper.get_process_availability_time(
-        processes
-    )
-    processes_deadline_time = ProcessesHelper.get_process_deadline_time(processes)
-
-    # TODO: write fessabilty check.
-
-    feasibility = check_feasibility_condition_for_edf(processes)
-    necessary = check_necessary_condition_for_edf(processes)
-
-    if not feasibility and not necessary:
-        print(
-            "Fesibility and necessary condition not stisfied, checking condition with lcm"
+    def initialize_process(self):
+        """_"""
+        self.print_starting()
+        processes = sorted(
+            self.processes,
+            key=lambda event: (event.arrival_time, event.relative_deadline),
         )
+        self.waiting_queue.extend(
+            [
+                Event(process.arrival_time, process, process.relative_deadline)
+                for process in processes
+            ]
+        )
+        self.find_lcm()
 
-    if not feasibility and necessary:
-        # keep it provides why it can be failed
-        print("If it satisfies necessary condition, but fails sufficient condition")
+    def find_lcm(self):
+        self.lcm = get_lcm([process.period for process in self.processes])
 
-    while current_time <= execution_time:
-        # check if there is any arrived process and push them into the waiting heap-min que
-        if current_time <= execution_time:
-            for process in processes:
-                # since the timings are sorted we can directly check the least time with current time.
-                try:
-                    if (
-                        processes_availability_time[process.process_number][0]
-                        <= current_time
-                    ) and (current_time - 1) + process.execution_time <= execution_time:
-                        temp_event = Event(
-                            processes_availability_time[process.process_number][0],
-                            process,
-                            processes_deadline_time[process.process_number][0],
-                        )
-                        # similar to poplet you can use the delete at 0 bothe deadline and arrival time
-                        del processes_availability_time[process.process_number][0]
-                        del processes_deadline_time[process.process_number][0]
-
-                        # push the event to the waiting list array.
-                        heapq.heappush(
-                            waiting_queue,
-                            (
-                                # then the new realtive deadline will the  +
-                                temp_event.dead_line,
-                                temp_event,
-                            ),
-                        )
-                        del temp_event
-                # condition where there is no process available
-                except IndexError:
-                    pass
-        # check for any ideal time in the processing.
-        if not waiting_queue and current_event is None:
-            current_time = current_time + 1
-            continue
-
-        # execute the task in waiting que
-        if waiting_queue:
-            relative_deadline, future_event = heapq.heappop(waiting_queue)
-            #  condition to check if new event is required or not.
-            if current_event is None:
-                current_event = future_event
-            elif future_event < current_event:
-                if verbose:
-                    print(
-                        f"At time {current_time}: Process {current_event} with {future_event.process}"
-                    )
-                # This will skip time to future with adding process switch.
-                # Since the program should be ideal at this process switch.
-                current_time = current_time + process_switch
-                heapq.heappush(
-                    waiting_queue,
-                    (
-                        current_event.dead_line,
-                        current_event,
-                    ),
+    def simulate(self):
+        """_"""
+        try:
+            while self.waiting_queue:
+                self.waiting_queue.sort(
+                    key=lambda event: (event.arrival_time, event.dead_line)
                 )
-                current_event = future_event
-                continue
-            else:
-                heapq.heappush(waiting_queue, (relative_deadline, future_event))
+                current_event = self.waiting_queue.pop(0)
+                self.current_time = max(current_event.arrival_time, self.current_time)
 
-            # check if it can schedule or not
-            if current_event.dead_line >= current_time:
-                current_event.remaining_time -= 1
-            else:
-                if detailed:
-                    print(
-                        f"There is not a feasible schedule.Schedule can be feasible from time 0 to {current_time}"
-                    )
-                    print(
-                        f"At time {current_time} units, process {current_event} missed thedeadline."
-                    )
-                print("There is no feasible schedule produced.")
-                print("====================================================")
-                fesable = False
-                break
-            # check if remaining time is 0
-            if current_event.remaining_time == 0:
-                current_event.finish_time = current_time
-                current_event.process.finish_times.append(current_time)
-                finished_events.append(current_event)
-                current_event = None
+                if current_event.event_type == EventTypeEnum.arrival:
+                    self.handle_arrival_event(current_event)
+                elif current_event.event_type == EventTypeEnum.completed:
+                    self.handle_completion(current_event)
+                elif current_event.event_type == EventTypeEnum.preemption:
+                    self.handle_preemption(current_event)
+        except DeadLineNotMeetError as error:
+            self.fesable = False
+            if self.detailed:
+                print(
+                    f"There is not a feasible schedule. Schedule can be feasible from time 0 to {self.lcm} units.",
+                    f"At time {self.current_time} units",
+                    error.event,
+                    f"process {current_event.process.process_number} missed the deadline \n",
+                )
+                # need to print cpu utilization
 
-        elif current_event:
-            # triggred when last event
-            # check if it can schedule or not
-            if current_event.dead_line > current_time - 1:
-                current_event.remaining_time -= 1
-            else:
-                if detailed:
-                    print(
-                        f"There is not a feasible schedule.Schedule can be feasible from time 0 to {current_time}"
-                    )
-                    print(
-                        f"At time {current_time} units, process {current_event} missed thedeadline."
-                    )
-                print("There is no feasible schedule produced.")
-                print("====================================================")
-                fesable = False
-                break
+        self.print_summary()
 
-            # check if remaining time is 0
-            if current_event.remaining_time == 0:
-                current_event.finish_time = current_time
-                current_event.process.finish_times.append(current_time)
-                finished_events.append(current_event)
-                current_event = None
+    def handle_arrival_event(self, event: Event):
+        """_"""
+        if self.check_preemptive(event):
+            event.event_type = EventTypeEnum.preemption
+            self.waiting_queue.insert(0, event)
+            return
+        elif (
+            self.current_time + event.remaining_time > event.dead_line
+            or self.current_time + event.remaining_time > self.lcm
+        ):
+            raise DeadLineNotMeetError(event)
+        else:
+            self.current_time = self.current_time + event.remaining_time
+            event.remaining_time = 0
+            event.finish_time = self.current_time
+            event.process.finish_times.append(self.current_time)
+            event.event_type = EventTypeEnum.completed
+            self.waiting_queue.insert(0, event)
 
-        current_time += 1
+    def check_preemptive(self, event: Event):
+        """check preemptive"""
+        preemptive = False
+        temp_event = None
 
-    if fesable:
-        print("There is feasible schedule produced.")
-        print(f"Total Time Required is {current_time-1} time units")
-        print(
-            f"Average Cpu Utilization is {int(ProcessesHelper.get_average_cpu_utilization_time(processes))} %"
+        # check if any event can be preempt by another event in waiting que.
+        for next_event in self.waiting_queue:
+            if (
+                next_event.arrival_time <= event.arrival_time + event.remaining_time
+                and next_event.dead_line < event.dead_line
+            ):
+                if temp_event is None:
+                    temp_event = next_event
+                elif temp_event > next_event:
+                    temp_event = next_event
+                preemptive = True
+        return preemptive
+
+    def get_preemptive_event(self, event: Event):
+        # check if any event can be preempt by another event in waiting que.
+        temp_event = None
+        temp_index = None
+        for index, next_event in enumerate(self.waiting_queue):
+            if (
+                next_event.arrival_time <= event.arrival_time + event.remaining_time
+                and next_event.dead_line < event.dead_line
+            ):
+                if self.verbose:
+                    print(f"current event: {event} cam ne preempt by {next_event}")
+
+                if temp_event is None:
+                    temp_event, temp_index = next_event, index
+                elif temp_event > next_event:
+                    temp_event, temp_index = next_event, index
+                return next_event
+
+        if temp_event and temp_index:
+            self.waiting_queue.pop(temp_index)
+            return temp_event
+        return None
+
+    def handle_preemption(self, event: Event):
+        """_"""
+        next_event = self.get_preemptive_event(event)
+        event.remaining_time -= next_event.arrival_time - self.current_time
+        self.current_time += (
+            next_event.arrival_time - self.current_time + self.process_switch
         )
-        print("====================================================")
+        event.arrival_time = self.current_time + next_event.remaining_time
+        event.event_type = EventTypeEnum.arrival
+        self.waiting_queue.insert(0, event)
+        self.waiting_queue.insert(0, next_event)
 
-    if detailed:
+    def handle_completion(self, event: Event):
+        """_"""
+
+        # to keep track of this event.
+        self.finished_events.append(event)
+
+        # generate a new event if its less than lcm.
+        # need to check this again.
+        if event.arrival_time + event.process.period < self.lcm:
+            self.waiting_queue.append(
+                Event(
+                    event.arrival_time + event.process.period,
+                    event.process,
+                    event.dead_line + event.process.period,
+                )
+            )
+
+    def print_starting(self):
+        """_"""
+        print("Earliest DeadLineFirst (EDF): \n")
+
+    def print_summary(self):
+        """_"""
+        if self.fesable:
+            print("There is feasible schedule produced ")
+        processes = self.processes
         for process in processes:
-            print("====================================================")
-            print(f"Process {process}")
-            print(f"Arrival time {process.arrival_time} units")
-            print(f"relative DeadLine {process.relative_deadline} units")
-            print(f"period: {process.period} units")
-            print(f"finish time: {process.finish_times}")
-            print("====================================================")
+            print(f"Process {process.process_number} \n")
+            print(f"arrival time: {process.arrival_time}")
+            print(f"service_time: {process.execution_time}")
+            print(f"relative deadline: {process.relative_deadline}")
+            print(f"period {process.period}")
+            print(f"finish time:{process.get_process_finish_time()} \n")
+
+
+class RateScheduler:
+    """_"""
+
+    def __init__(
+        self,
+        num_processes: int,
+        processes: list[Process],
+        process_switch: int,
+        verbose: bool,
+        detailed: bool,
+    ):
+        self.current_time = 0
+        self.current_event: None | Event = None
+        self.finished_events: list[Event] = []
+        self.waiting_queue: list[Event] = []
+        self.fesable = True
+        self.processes = processes
+        self.num_process = num_processes
+        self.process_switch = process_switch
+        self.verbose = verbose
+        self.detailed = detailed
+        self.lcm = 100
+
+    def initialize_process(self):
+        """_"""
+        self.print_starting()
+        processes = sorted(
+            self.processes,
+            key=lambda process: process.arrival_time,
+        )
+        self.waiting_queue.extend(
+            [
+                Event(process.arrival_time, process, process.relative_deadline)
+                for process in processes
+            ]
+        )
+        self.find_lcm()
+
+    def find_lcm(self):
+        self.lcm = get_lcm([process.period for process in self.processes])
+
+    def simulate(self):
+        """_"""
+        try:
+            while self.waiting_queue:
+                self.waiting_queue.sort(
+                    key=lambda event: (event.arrival_time, -event.process.priority("RM")),
+                )
+                current_event = self.waiting_queue.pop(0)
+                self.current_time = max(current_event.arrival_time, self.current_time)
+
+                if current_event.event_type == EventTypeEnum.arrival:
+                    self.handle_arrival_event(current_event)
+                elif current_event.event_type == EventTypeEnum.completed:
+                    self.handle_completion(current_event)
+                elif current_event.event_type == EventTypeEnum.preemption:
+                    self.handle_preemption(current_event)
+        except DeadLineNotMeetError as error:
+            self.fesable = False
+            if self.detailed:
+                print(
+                    f"There is not a feasible schedule. Schedule can be feasible from time 0 to {self.lcm} units.",
+                    f"At time {self.current_time} units",
+                    error.event,
+                    f"process {current_event.process.process_number} missed the deadline \n",
+                )
+                # need to print cpu utilization
+
+        self.print_summary()
+
+    def handle_arrival_event(self, event: Event):
+        """_"""
+        if self.check_preemptive(event):
+            event.event_type = EventTypeEnum.preemption
+            self.waiting_queue.insert(0, event)
+            return
+        elif (
+            self.current_time + event.remaining_time > event.dead_line
+            or self.current_time + event.remaining_time > self.lcm
+        ):
+            raise DeadLineNotMeetError(event)
+        else:
+            self.current_time = self.current_time + event.remaining_time
+            event.remaining_time = 0
+            event.finish_time = self.current_time
+            event.process.finish_times.append(self.current_time)
+            event.event_type = EventTypeEnum.completed
+            self.waiting_queue.insert(0, event)
+
+    def check_preemptive(self, event: Event):
+        """check preemptive"""
+        preemptive = False
+        temp_event = None
+
+        # check if any event can be preempt by another event in waiting que.
+        for next_event in self.waiting_queue:
+            if (
+                next_event.arrival_time <= event.arrival_time + event.remaining_time
+                and next_event.process.priority("RM") > event.process.priority("RM")
+            ):
+                if temp_event is None:
+                    temp_event = next_event
+                elif temp_event > next_event:
+                    temp_event = next_event
+                preemptive = True
+        return preemptive
+
+    def get_preemptive_event(self, event: Event):
+        """_"""
+        # check if any event can be preempt by another event in waiting que.
+        temp_event = None
+        temp_index = None
+        for index, next_event in enumerate(self.waiting_queue):
+            if (
+                next_event.arrival_time <= event.arrival_time + event.remaining_time
+                and next_event.process.priority("RM") > event.process.priority("RM")
+            ):
+                if self.verbose:
+                    print(f"current event: {event} cam ne preempt by {next_event}")
+
+                if temp_event is None:
+                    temp_event, temp_index = next_event, index
+                elif temp_event > next_event:
+                    temp_event, temp_index = next_event, index
+                return next_event
+
+        if temp_event and temp_index:
+            self.waiting_queue.pop(temp_index)
+            return temp_event
+        return None
+
+    def handle_preemption(self, event: Event):
+        """_"""
+        next_event = self.get_preemptive_event(event)
+        event.remaining_time -= next_event.arrival_time - self.current_time
+        self.current_time += (
+            next_event.arrival_time - self.current_time + self.process_switch
+        )
+        event.arrival_time = self.current_time + next_event.remaining_time
+        event.event_type = EventTypeEnum.arrival
+        self.waiting_queue.insert(0, event)
+        self.waiting_queue.insert(0, next_event)
+
+    def handle_completion(self, event: Event):
+        """_"""
+
+        # to keep track of this event.
+        self.finished_events.append(event)
+
+        # generate a new event if its less than lcm.
+        # need to check this again.
+        if event.arrival_time + event.process.period < self.lcm:
+            self.waiting_queue.append(
+                Event(
+                    event.arrival_time + event.process.period,
+                    event.process,
+                    event.dead_line + event.process.period,
+                )
+            )
+
+    def print_starting(self):
+        """_"""
+        print("RateMonotonic (RM): \n")
+
+    def print_summary(self):
+        """_"""
+        if self.fesable:
+            print("There is feasible schedule produced ")
+        processes = self.processes
+        for process in processes:
+            print(f"Process {process.process_number} \n")
+            print(f"arrival time: {process.arrival_time}")
+            print(f"service_time: {process.execution_time}")
+            print(f"relative deadline: {process.relative_deadline}")
+            print(f"period {process.period}")
+            print(f"finish time:{process.get_process_finish_time()} \n")
 
 
 def main():
@@ -589,7 +740,7 @@ def main():
     processes = [Process(*map(int, line.strip().split())) for line in lines[1:]]
 
     # mapper will trigger the algorithm bassed on execution
-    ALGO_MAPPER = {"RM": schedule_rm, "DM": schedule_dm, "EDF": schedule_edf}
+    ALGO_MAPPER = {"RM": RateScheduler, "DM": schedule_dm, "EDF": EdfScheduler}
 
     # algorithm gives us set of algorithm that needs to be performed.
     if algorithm is None:
@@ -599,6 +750,10 @@ def main():
 
     # apply multiple algo sequentially.
     for algo in algorithm:
+        if algo in [EdfScheduler, RateScheduler]:
+            test = algo(num_processes, processes, process_switch, verbose, detailed)
+            test.initialize_process()
+            test.simulate()
         algo(num_processes, processes, process_switch, verbose, detailed)
 
 
