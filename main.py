@@ -6,10 +6,12 @@ import heapq
 from typing import Literal
 from enum import Enum
 
+
 class EventTypeEnum(Enum):
     arrival = "arrival"
     completed = "completed"
     preemption = "preemption"
+
 
 def get_lcm(values: list):
     """helps to find lcm in the given processors"""
@@ -104,6 +106,7 @@ class DeadLineNotMeetError(Exception):
 
     def __init__(self, event: Event) -> None:
         self.event = event
+
 
 class ProcessesHelper:
     """_"""
@@ -391,7 +394,7 @@ class DMScheduler:
     def print_summary(self):
         if self.feasible:
             print(
-                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.calculate_total_cpu_time(self.processes)}%"
+                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.get_average_cpu_utilization_time(self.processes, self.current_time)}%"
             )
         processes = self.processes
         print("====================================================")
@@ -577,7 +580,7 @@ class EdfScheduler:
     def print_summary(self):
         if self.fesable:
             print(
-                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.calculate_total_cpu_time(self.processes)}%"
+                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.get_average_cpu_utilization_time(self.processes, self.current_time)}%"
             )
         processes = self.processes
         print("====================================================")
@@ -766,7 +769,7 @@ class RateScheduler:
     def print_summary(self):
         if self.fesable:
             print(
-                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.calculate_total_cpu_time(self.processes)}%"
+                f"There is feasible schedule produced. Total Time Required is {self.current_time} time units. CPU Utilization is {ProcessesHelper.get_average_cpu_utilization_time(self.processes, self.current_time)}%"
             )
         processes = self.processes
         print("====================================================")
@@ -826,7 +829,6 @@ def main():
     # mapper will trigger the algorithm bassed on execution
     ALGO_MAPPER = {"RM": RateScheduler, "DM": DMScheduler, "EDF": EdfScheduler}
 
-
     # algorithm gives us set of algorithm that needs to be performed.
     if algorithm is None:
         algorithm = ALGO_MAPPER.values()
@@ -835,7 +837,6 @@ def main():
 
     # apply multiple algo sequentially.
     for algo in algorithm:
-
         if algo in [EdfScheduler, RateScheduler, DMScheduler]:
             test = algo(num_processes, processes, process_switch, verbose, detailed)
             test.initialize_process()
