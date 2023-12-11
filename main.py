@@ -6,12 +6,10 @@ import heapq
 from typing import Literal
 from enum import Enum
 
-
 class EventTypeEnum(Enum):
     arrival = "arrival"
     completed = "completed"
     preemption = "preemption"
-
 
 def get_lcm(values: list):
     """helps to find lcm in the given processors"""
@@ -106,7 +104,6 @@ class DeadLineNotMeetError(Exception):
 
     def __init__(self, event: Event) -> None:
         self.event = event
-
 
 class ProcessesHelper:
     """_"""
@@ -644,7 +641,7 @@ class RateScheduler:
                     key=lambda event: (
                         event.arrival_time,
                         -event.process.priority("RM"),
-                    ),
+                    )
                 )
                 current_event = self.waiting_queue.pop(0)
                 self.current_time = max(current_event.arrival_time, self.current_time)
@@ -829,6 +826,7 @@ def main():
     # mapper will trigger the algorithm bassed on execution
     ALGO_MAPPER = {"RM": RateScheduler, "DM": DMScheduler, "EDF": EdfScheduler}
 
+
     # algorithm gives us set of algorithm that needs to be performed.
     if algorithm is None:
         algorithm = ALGO_MAPPER.values()
@@ -837,6 +835,7 @@ def main():
 
     # apply multiple algo sequentially.
     for algo in algorithm:
+
         if algo in [EdfScheduler, RateScheduler, DMScheduler]:
             test = algo(num_processes, processes, process_switch, verbose, detailed)
             test.initialize_process()
