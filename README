@@ -1,0 +1,33 @@
+Here is a list of all commands 
+necessary to run each simulation 
+from our different input files
+
+# For Feasible.txt Input:
+make run_ALL
+make run_ALLDetailed
+make run_RMDetailed
+make run_DMDetailed
+make run_EDFDetailed
+make run_RMVerbose
+make run_DMVerbose
+make run_EDFVerbose
+
+# For Not Feasible.txt Input:
+make run_NOT_FEASIBLE_ALL
+make run_NOT_FEASIBLE_ALLDetailed
+make run_NOT_FEASIBLE_RMDetailed
+make run_NOT_FEASIBLE_DMDetailed
+make run_NOT_FEASIBLE_EDFDetailed
+make run_NOT_FEASIBLE_RMVerbose
+make run_NOT_FEASIBLE_DMVerbose
+make run_NOT_FEASIBLE_EDFVerbose
+
+# For Preemption.txt Input:
+make run_PREEMPTION_ALL
+make run_PREEMPTION_ALLDetailed
+make run_PREEMPTION_RMDetailed
+make run_PREEMPTION_DMDetailed
+make run_PREEMPTION_EDFDetailed
+make run_PREEMPTION_RMVerbose
+make run_PREEMPTION_DMVerbose
+make run_PREEMPTION_EDFVerbose
