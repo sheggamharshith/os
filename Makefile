@@ -28,14 +28,6 @@ run_DMDetailed:
 run_EDFDetailed:
 	python3 main.py -d $(ARGS_EDF) < $(INPUT_FILE_FEASIBLE)
 
-run_RMVerbose:
-	python3 main.py -v $(ARGS_RM) < $(INPUT_FILE_FEASIBLE)
-
-run_DMVerbose:
-	python3 main.py -v $(ARGS_DM) < $(INPUT_FILE_FEASIBLE)
-
-run_EDFVerbose:
-	python3 main.py -v $(ARGS_EDF) < $(INPUT_FILE_FEASIBLE)
 
 # Targets for not feasible input file
 run_NOT_FEASIBLE_ALL:

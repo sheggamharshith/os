@@ -1,6 +1,11 @@
-Here is a list of all commands 
-necessary to run each simulation 
-from our different input files
+Here is a list of all commands necessary to run each simulation from our different input files.
+The program is written in python so as long as python is installed and the make package, you will be able to run all commands below.
+In the results folder you can find the results of various methods in detailed and verbose modes. 
+The main.py file contains all necessary code in order to run the algorithms with the use of 3 different input files (Feasible, not_feasible, and preemption).
+If you would like to run your own command line instead of using the make commands below you will simply need python and run this command:
+    python3 main.py (-d or -v) -a (RM or DM or EDF) < (feasible.txt or not_feasible.txt or preemption.txt)
+a detailed feasible RM command completed would look like: python3 main.py -d -a RM < feasible.txt
+the file_generation.py file can be used to create a new input_file.txt and will create the file with a random number of processes between 5 and 10.
 
 # For Feasible.txt Input:
 make run_ALL
@@ -8,9 +13,6 @@ make run_ALLDetailed
 make run_RMDetailed
 make run_DMDetailed
 make run_EDFDetailed
-make run_RMVerbose
-make run_DMVerbose
-make run_EDFVerbose
 
 # For Not Feasible.txt Input:
 make run_NOT_FEASIBLE_ALL
@@ -24,10 +26,6 @@ make run_NOT_FEASIBLE_EDFVerbose
 
 # For Preemption.txt Input:
 make run_PREEMPTION_ALL
-make run_PREEMPTION_ALLDetailed
-make run_PREEMPTION_RMDetailed
-make run_PREEMPTION_DMDetailed
-make run_PREEMPTION_EDFDetailed
 make run_PREEMPTION_RMVerbose
 make run_PREEMPTION_DMVerbose
 make run_PREEMPTION_EDFVerbose

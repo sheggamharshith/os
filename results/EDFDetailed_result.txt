@@ -1,0 +1,57 @@
+====================================================
+Earliest DeadLineFirst (EDF):
+
+There is feasible schedule produced. Total Time Required is 5013 time units. CPU Utilization is 596.9279872331937%
+====================================================
+Process 1
+
+arrival time: 0
+service_time: 3
+relative deadline: 15
+period: 30
+finish time:3 units, 40 units, 63 units, 95 units, 123 units, 153 units, 183 units, 213 units, 243 units, 273 units, 303 units, 335 units, 363 units, 393 units, 423 units, 453 units, 483 units, 513 units, 543 units, 582 units, 603 units, 633 units, 664 units, 693 units, 723 units, 753 units, 783 units, 815 units, 843 units, 873 units, 903 units, 933 units, 963 units, 993 units, 1023 units, 1055 units, 1083 units, 1113 units, 1143 units, 1173 units, 1203 units, 1233 units, 1263 units, 1300 units, 1323 units, 1353 units, 1383 units, 1414 units, 1443 units, 1473 units, 1503 units, 1535 units, 1563 units, 1593 units, 1623 units, 1653 units, 1683 units, 1713 units, 1743 units, 1775 units, 1803 units, 1833 units, 1863 units, 1893 units, 1923 units, 1953 units, 1983 units, 2015 units, 2043 units, 2073 units, 2103 units, 2133 units, 2163 units, 2200 units, 2223 units, 2262 units, 2283 units, 2313 units, 2343 units, 2373 units, 2403 units, 2433 units, 2463 units, 2495 units, 2523 units, 2553 units, 2583 units, 2613 units, 2643 units, 2673 units, 2703 units, 2735 units, 2763 units, 2793 units, 2824 units, 2853 units, 2883 units, 2913 units, 2943 units, 2975 units, 3003 units, 3033 units, 3063 units, 3094 units, 3123 units, 3153 units, 3183 units, 3215 units, 3243 units, 3273 units, 3303 units, 3333 units, 3363 units, 3393 units, 3423 units, 3460 units, 3483 units, 3513 units, 3543 units, 3573 units, 3603 units, 3633 units, 3663 units, 3695 units, 3723 units, 3753 units, 3783 units, 3813 units, 3843 units, 3873 units, 3903 units, 3942 units, 3963 units, 3993 units, 4023 units, 4053 units, 4083 units, 4113 units, 4143 units, 4175 units, 4203 units, 4233 units, 4263 units, 4293 units, 4323 units, 4360 units, 4383 units, 4415 units, 4443 units, 4473 units, 4503 units, 4533 units, 4563 units, 4593 units, 4623 units, 4655 units, 4683 units, 4713 units, 4743 units, 4774 units, 4803 units, 4833 units, 4863 units, 4895 units, 4923 units, 4953 units, 4984 units, 5013 units,
+====================================================
+Process 2
+
+arrival time: 0
+service_time: 4
+relative deadline: 20
+period: 40
+finish time:7 units, 44 units, 84 units, 127 units, 164 units, 204 units, 247 units, 286 units, 324 units, 367 units, 404 units, 444 units, 487 units, 524 units, 564 units, 607 units, 653 units, 684 units, 727 units, 764 units, 804 units, 847 units, 884 units, 929 units, 967 units, 1006 units, 1044 units, 1087 units, 1124 units, 1164 units, 1207 units, 1244 units, 1289 units, 1327 units, 1366 units, 1404 units, 1447 units, 1484 units, 1524 units, 1567 units, 1604 units, 1644 units, 1687 units, 1726 units, 1764 units, 1807 units, 1844 units, 1884 units, 1927 units, 1964 units, 2004 units, 2047 units, 2086 units, 2124 
+units, 2167 units, 2204 units, 2244 units, 2287 units, 2324 units, 2364 units, 2407 units, 2446 units, 2484 units, 2527 units, 2564 units, 2604 units, 2647 units, 2684 units, 2724 units, 2767 units, 2806 units, 2844 units, 2887 units, 2924 units, 2964 units, 3007 units, 3044 units, 3084 units, 3127 units, 3173 units, 3204 units, 3247 units, 3284 units, 3324 units, 3367 units, 3404 units, 3449 units, 3487 units, 3526 units, 3564 units, 3607 units, 3644 units, 3684 units, 3727 units, 3764 units, 3809 units, 3847 units, 3886 units, 3924 units, 3967 units, 4004 units, 4044 units, 4087 units, 4124 units, 4164 units, 4207 
+units, 4246 units, 4284 units, 4327 units, 4364 units, 4404 units, 4447 units, 4484 units, 4524 units, 4567 units, 4606 units, 4644 units, 4687 units, 4724 units, 4764 units, 4807 units, 4844 units, 4884 units, 4927 units, 4966 units, 5004 units,
+====================================================
+Process 3
+
+arrival time: 0
+service_time: 6
+relative deadline: 30
+period: 60
+finish time:13 units, 69 units, 133 units, 189 units, 253 units, 309 units, 373 units, 429 units, 493 units, 549 units, 613 units, 670 units, 733 units, 789 units, 853 units, 909 units, 973 units, 1029 units, 1093 units, 1149 units, 1213 units, 1269 units, 1333 units, 1389 units, 1453 units, 1509 units, 1573 units, 1629 units, 1693 units, 1749 units, 1813 units, 1869 units, 1933 units, 1989 units, 2053 units, 2109 units, 2173 units, 2229 units, 2293 units, 2349 units, 2413 units, 2469 units, 2533 units, 2589 units, 2653 units, 2709 units, 2773 units, 2830 units, 2893 units, 2949 units, 3013 units, 3069 units, 3133 units, 3189 units, 3253 units, 3309 units, 3373 units, 3429 units, 3493 units, 3549 units, 3613 units, 3669 units, 3733 units, 3789 units, 3853 units, 3909 units, 3973 units, 4029 units, 4093 units, 4149 units, 4213 units, 4269 units, 4333 units, 4389 units, 4453 units, 4509 units, 4573 units, 4629 units, 4693 units, 4749 units, 4813 units, 4869 units, 4933 units, 4990 units,
+====================================================
+Process 4
+
+arrival time: 0
+service_time: 7
+relative deadline: 35
+period: 70
+finish time:20 units, 77 units, 147 units, 220 units, 293 units, 357 units, 436 units, 508 units, 571 units, 640 units, 707 units, 777 units, 860 units, 925 units, 988 units, 1062 units, 1131 units, 1197 units, 1276 units, 1340 units, 1411 units, 1480 units, 1551 units, 1619 units, 1700 units, 1757 units, 1829 units, 1900 units, 1971 units, 2037 units, 2116 units, 2197 units, 2251 units, 2320 units, 2387 units, 2457 units, 2540 units, 2597 units, 2668 units, 2742 units, 2813 units, 2877 units, 2956 units, 3020 units, 3091 units, 3160 units, 3227 units, 3299 units, 3380 units, 3445 units, 3507 units, 3580 units, 3651 
+units, 3717 units, 3796 units, 3868 units, 3931 units, 4000 units, 4069 units, 4137 units, 4220 units, 4277 units, 4357 units, 4422 units, 4491 units, 4557 units, 4636 units, 4709 units, 4771 units, 4840 units, 4907 units, 4981 units,
+====================================================
+Process 5
+
+arrival time: 0
+service_time: 8
+relative deadline: 40
+period: 80
+finish time:28 units, 92 units, 172 units, 261 units, 332 units, 412 units, 501 units, 579 units, 661 units, 741 units, 812 units, 892 units, 981 units, 1052 units, 1139 units, 1221 units, 1297 units, 1374 units, 1461 units, 1532 units, 1612 units, 1708 units, 1772 units, 1852 units, 1941 units, 2012 units, 2094 units, 2181 units, 2259 units, 2332 units, 2421 units, 2492 units, 2572 units, 2661 units, 2732 units, 2821 units, 2901 units, 2972 units, 3052 units, 3141 units, 3212 units, 3292 units, 3388 units, 3457 units, 3534 units, 3621 units, 3692 units, 3772 units, 3861 units, 3939 units, 4012 units, 4101 units, 4172 units, 4254 units, 4341 units, 4412 units, 4499 units, 4581 units, 4652 units, 4732 units, 4821 units, 4892 units, 4974 units,
+====================================================
+Process 6
+
+arrival time: 0
+service_time: 9
+relative deadline: 45
+period: 90
+finish time:37 units, 104 units, 198 units, 282 units, 382 units, 462 units, 558 units, 649 units, 750 units, 824 units, 918 units, 1002 units, 1102 units, 1182 units, 1285 units, 1362 units, 1470 units, 1544 units, 1638 units, 1722 units, 1822 units, 1909 units, 1998 units, 2082 units, 2190 units, 2271 units, 2358 units, 2442 units, 2549 units, 2622 units, 2718 units, 2802 units, 2910 units, 2984 units, 3078 units, 3169 units, 3262 units, 3342 units, 3438 units, 3522 units, 3630 units, 3704 units, 3805 units, 3882 units, 3982 units, 4062 units, 4158 units, 4242 units, 4350 units, 4431 units, 4518 units, 4602 units, 
+4702 units, 4783 units, 4878 units, 4962 units,
+====================================================
