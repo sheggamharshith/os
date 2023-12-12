@@ -1,0 +1,71 @@
+====================================================
+Earliest DeadLineFirst (EDF):
+
+There is not a feasible schedule. Schedule can be feasible from time 0 to 360 units. At time 13 units, process 1 missed the deadline.
+ From 0 to 13, Total CPU time required is 38 units
+ CPU Utilization is 300.0%
+====================================================
+Process 1
+
+arrival time: 0
+service_time: 6
+relative deadline: 10
+period: 5
+finish time:6 units,
+====================================================
+Process 2
+
+arrival time: 2
+service_time: 5
+relative deadline: 11
+period: 6
+finish time:7 units,
+====================================================
+Process 3
+
+arrival time: 3
+service_time: 9
+relative deadline: 12
+period: 6
+finish time:12 units,
+====================================================
+Process 4
+
+arrival time: 5
+service_time: 8
+relative deadline: 13
+period: 8
+finish time:13 units,
+====================================================
+Process 5
+
+arrival time: 0
+service_time: 1
+relative deadline: 14
+period: 9
+finish time:7 units,
+====================================================
+Process 6
+
+arrival time: 4
+service_time: 2
+relative deadline: 15
+period: 6
+finish time:
+====================================================
+Process 7
+
+arrival time: 0
+service_time: 3
+relative deadline: 17
+period: 4
+finish time:
+====================================================
+Process 8
+
+arrival time: 2
+service_time: 4
+relative deadline: 18
+period: 3
+finish time:
+====================================================
